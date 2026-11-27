@@ -1,0 +1,27 @@
+{
+  "name": "CodeSentry-Roblox",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "CodeSentry": {
+        "$className": "Folder",
+        "Shared": {
+          "$path": "src/Shared"
+        },
+        "Tests": {
+          "$path": "src/Tests"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "CodeSentry": {
+          "$path": "src/Client"
+        }
+      }
+    }
+  }
+}
