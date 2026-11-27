@@ -1,3 +1,4 @@
+
 name: CodeSentry Quality Checks
 
 on:
@@ -21,10 +22,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Rojo
-        uses: rojo-rbx/setup-rojo@v1
-        with:
-          version: "7.4.4"
+      - name: Install Rojo
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://github.com/rojo-rbx/rojo/releases/download/v7.4.4/rojo-7.4.4-linux-x86_64.zip -o rojo.zip
+          unzip -o rojo.zip -d "$HOME/.local/bin"
+          chmod +x "$HOME/.local/bin/rojo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          rojo --version
 
       - name: Validate project configuration
         run: python3 -m json.tool default.project.json > /dev/null
@@ -34,4 +39,3 @@ jobs:
 
       - name: Verify build output
         run: test -s CodeSentry.rbxlx
-        
