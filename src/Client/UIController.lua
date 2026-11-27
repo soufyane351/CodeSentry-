@@ -648,7 +648,7 @@ function UIController:_showResult(result: {[string]: any})
 		FillDirection = Enum.FillDirection.Horizontal,
 		Padding = UDim.new(0, 6),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-	}) :: UIListLayout
+	})
 	for index, mode in ipairs({ "3", "4", "auto" }) do
 		local label = mode == "auto" and "AUTO" or ("MODE " .. mode)
 		local button = makeButton(modeRow, label, "SurfaceAlt")
@@ -746,7 +746,7 @@ function UIController:_buildHistory()
 		FillDirection = Enum.FillDirection.Horizontal,
 		Padding = UDim.new(0, 6),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-	}) :: UIListLayout
+	})
 	for index, filter in ipairs({
 		{ id = "all", label = "ALL" },
 		{ id = "three-word", label = "MODE 3" },
