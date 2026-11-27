@@ -1,0 +1,38 @@
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Rojo build output
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.old
+*.log
+
+# Node.js tools
+node_modules/
+
+# Python tools and cache
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Test and coverage output
+coverage/
+test-results/
