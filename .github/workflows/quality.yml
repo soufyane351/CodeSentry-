@@ -22,6 +22,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Luau compiler
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://github.com/luau-lang/luau/releases/download/0.748/luau-ubuntu.zip -o luau.zip
+          unzip -o luau.zip -d "$HOME/.local/bin"
+          COMPILER="$(find "$HOME/.local/bin" -type f -name 'luau-compile' -print -quit)"
+          test -n "$COMPILER"
+          chmod +x "$COMPILER"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "LUAU_COMPILER=$COMPILER" >> "$GITHUB_ENV"
+
+      - name: Compile all Luau source and test files
+        run: |
+          find src -type f -name '*.lua' -print0 |
+          while IFS= read -r -d '' file; do
+            echo "Compiling $file"
+            "$LUAU_COMPILER" "$file" >/dev/null
+          done
+
+      - name: Run static package and security audit
+        run: python3 tools/audit_bundle.py
+
+      - name: Validate project configuration
+        run: python3 -m json.tool default.project.json > /dev/null
+
       - name: Install Rojo
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -30,9 +55,6 @@ jobs:
           chmod +x "$HOME/.local/bin/rojo"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           rojo --version
-
-      - name: Validate project configuration
-        run: python3 -m json.tool default.project.json > /dev/null
 
       - name: Build Roblox project
         run: rojo build default.project.json --output CodeSentry.rbxlx
