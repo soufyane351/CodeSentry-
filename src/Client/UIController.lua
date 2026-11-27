@@ -1,3 +1,4 @@
+
 --!strict
 -- Responsive Roblox UI for CodeSentry. All detection is local text processing.
 
@@ -255,7 +256,7 @@ function UIController:_buildShell()
 		FillDirection = Enum.FillDirection.Horizontal,
 		Padding = UDim.new(0, 8),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-	}) :: UIListLayout
+	})
 
 	for index, item in ipairs({
 		{ id = "dashboard", label = "Dashboard" },
@@ -317,6 +318,311 @@ function UIController:_buildDashboard()
 	addCorner(input, 9)
 	addPadding(input, 11, 11, 10, 8)
 	self.refs.input = input
+	local clearInput = makeButton(inputPanel, "Clear input", "SurfaceAlt", "Muted")
+	clearInput.Position = UDim2.new(1, -105, 1, -26)
+	clearInput.Size = UDim2.new(0, 105, 0, 24)
+	clearInput.TextSize = 10
+	self:_connect(clearInput.Activated, function()
+		input.Text = ""
+		input:CaptureFocus()
+	end)
+
+	local modePanel = makePanel(page, "DetectionMode", 76)
+	modePanel.LayoutOrder = 4
+	addPadding(modePanel, 15, 15, 10, 10)
+	makeLabel(modePanel, "DETECTION MODE", 10, "Muted", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(0.35, 0, 0, 18),
+	})
+	local modeRow = make("Frame", modePanel, {
+		Position = UDim2.new(0.37, 0, 0, 1),
+		Size = UDim2.new(0.63, 0, 0, 42),
+		BackgroundTransparency = 1,
+	}, nil) :: Frame
+	make("UIListLayout", modeRow, {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	})
+	for index, mode in ipairs({ "3", "4", "auto" }) do
+		local label = mode == "auto" and "AUTO" or ("MODE " .. mode)
+		local button = makeButton(modeRow, label, "SurfaceAlt")
+		button.LayoutOrder = index
+		button.Size = UDim2.new(1 / 3, -5, 1, 0)
+		button.TextSize = 10
+		self.modeButtons[mode] = button
+		self:_connect(button.Activated, function()
+			self:_setMode(mode)
+		end)
+	end
+
+	local detect = makeButton(page, "DETECT ANNOUNCEMENT", "Accent", "AccentText")
+	detect.Name = "DetectButton"
+	detect.Size = UDim2.new(1, 0, 0, 48)
+	detect.TextSize = 13
+	detect.LayoutOrder = 5
+	self.refs.detectButton = detect
+	self:_connect(detect.Activated, function()
+		self:_detect()
+	end)
+
+	local resultPanel = makePanel(page, "DetectionResult", 135)
+	resultPanel.LayoutOrder = 6
+	addPadding(resultPanel, 15, 15, 12, 12)
+	local resultHeader = make("Frame", resultPanel, {
+		Size = UDim2.new(1, 0, 0, 24),
+		BackgroundTransparency = 1,
+	}, nil) :: Frame
+	makeLabel(resultHeader, "LATEST RESULT", 10, "Muted", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(0.55, 0, 1, 0),
+	})
+	local status = makeLabel(resultHeader, "WAITING", 9, "Muted", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 110, 1, 0),
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	})
+	local code = makeLabel(resultPanel, "No code detected yet", 17, "Text", {
+		Position = UDim2.new(0, 0, 0, 34),
+		Size = UDim2.new(1, 0, 0, 32),
+		Font = Enum.Font.GothamBold,
+		TextWrapped = true,
+	})
+	local details = makeLabel(resultPanel, "Your detection result will appear here.", 10, "Muted", {
+		Position = UDim2.new(0, 0, 0, 72),
+		Size = UDim2.new(1, 0, 0, 42),
+		TextWrapped = true,
+		TextYAlignment = Enum.TextYAlignment.Top,
+	})
+	self.refs.resultStatus = status
+	self.refs.resultCode = code
+	self.refs.resultDetails = details
+end
+
+function UIController:_buildHistory()
+	local page = self.pages.history
+	makeLabel(page, "Detection history", 18, "Text", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(1, 0, 0, 28),
+		LayoutOrder = 1,
+	})
+	makeLabel(page, "Recent detections from this session appear first.", 11, "Muted", {
+		Size = UDim2.new(1, 0, 0, 22),
+		LayoutOrder = 2,
+	})
+
+	local controls = makePanel(page, "HistoryControls", 112)
+	controls.LayoutOrder = 3
+	addPadding(controls, 12, 12, 10, 10)
+	local search = make("TextBox", controls, {
+		Name = "HistorySearch",
+		Size = UDim2.new(1, 0, 0, 34),
+		BackgroundColor3 = Color3.fromRGB(15, 21, 33),
+		BorderSizePixel = 0,
+		ClearTextOnFocus = false,
+		PlaceholderText = "Search code history...",
+		Text = "",
+		TextSize = 12,
+		Font = Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, "Input", "Text") :: TextBox
+	addCorner(search, 8)
+	addPadding(search, 10, 10, 0, 0)
+	self.refs.historySearch = search
+
+	local filterRow = make("Frame", controls, {
+		Position = UDim2.new(0, 0, 0, 44),
+		Size = UDim2.new(1, 0, 0, 42),
+		BackgroundTransparency = 1,
+	}, nil) :: Frame
+	make("UIListLayout", filterRow, {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	})
+	for index, filter in ipairs({
+		{ id = "all", label = "ALL" },
+		{ id = "three-word", label = "MODE 3" },
+		{ id = "four-digit", label = "MODE 4" },
+	}) do
+		local button = makeButton(filterRow, filter.label, filter.id == "all" and "Accent" or "SurfaceAlt")
+		button.LayoutOrder = index
+		button.Size = UDim2.new(1 / 3, -5, 1, 0)
+		button.TextSize = 9
+		self:_connect(button.Activated, function()
+			self.historyFilter = filter.id
+			for filterId, filterButton in pairs(self.refs.filterButtons) do
+				filterButton:SetAttribute("ThemeRole", filterId == self.historyFilter and "Accent" or "SurfaceAlt")
+			end
+			ThemeController.apply(self.gui, self.config.theme)
+			self:_renderHistory()
+		end)
+		self.refs.filterButtons = self.refs.filterButtons or {}
+		self.refs.filterButtons[filter.id] = button
+	end
+
+	local listPanel = makePanel(page, "HistoryList", 370)
+	listPanel.LayoutOrder = 4
+	addPadding(listPanel, 10, 10, 10, 10)
+	makeLabel(listPanel, "RECENT CODES", 10, "Muted", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(1, 0, 0, 18),
+	})
+	local list = make("ScrollingFrame", listPanel, {
+		Name = "HistoryEntries",
+		Position = UDim2.new(0, 0, 0, 26),
+		Size = UDim2.new(1, 0, 1, -68),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, nil) :: ScrollingFrame
+	addVerticalLayout(list, 7)
+	self.refs.historyList = list
+	local clear = makeButton(listPanel, "CLEAR SESSION HISTORY", "Danger", "AccentText")
+	clear.Position = UDim2.new(0, 0, 1, -34)
+	clear.Size = UDim2.new(1, 0, 0, 30)
+	clear.TextSize = 10
+	self:_connect(clear.Activated, function()
+		self.history:clear()
+		self:_renderHistory()
+		self:_notify("History cleared", "Session detections have been cleared.", "warning")
+	end)
+	self:_connect(search:GetPropertyChangedSignal("Text"), function()
+		self:_renderHistory()
+	end)
+end
+
+function UIController:_buildSettings()
+	local page = self.pages.settings
+	makeLabel(page, "Settings", 18, "Text", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(1, 0, 0, 28),
+		LayoutOrder = 1,
+	})
+	makeLabel(page, "Tune how announcement text is interpreted.", 11, "Muted", {
+		Size = UDim2.new(1, 0, 0, 22),
+		LayoutOrder = 2,
+	})
+
+	local prefixPanel = makePanel(page, "PrefixSettings", 190)
+	prefixPanel.LayoutOrder = 3
+	addPadding(prefixPanel, 14, 14, 12, 12)
+	makeLabel(prefixPanel, "RECOGNIZED PREFIXES", 10, "Muted", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(1, 0, 0, 18),
+	})
+	local prefixBox = make("TextBox", prefixPanel, {
+		Name = "PrefixList",
+		Position = UDim2.new(0, 0, 0, 26),
+		Size = UDim2.new(1, 0, 0, 108),
+		BackgroundColor3 = Color3.fromRGB(15, 21, 33),
+		BorderSizePixel = 0,
+		ClearTextOnFocus = false,
+		MultiLine = true,
+		Text = table.concat(self.config.prefixes, "\n"),
+		PlaceholderText = "One prefix per line (for example: code:)",
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Font = Enum.Font.Code,
+		TextWrapped = true,
+	}, "Input", "Text") :: TextBox
+	addCorner(prefixBox, 8)
+	addPadding(prefixBox, 10, 10, 8, 8)
+	self.refs.prefixBox = prefixBox
+	local requirePrefix = makeButton(prefixPanel, "REQUIRE PREFIX: ON", "SurfaceAlt")
+	requirePrefix.Position = UDim2.new(0, 0, 1, -35)
+	requirePrefix.Size = UDim2.new(1, 0, 0, 28)
+	requirePrefix.TextSize = 10
+	self.refs.requirePrefixButton = requirePrefix
+	self:_connect(requirePrefix.Activated, function()
+		self.config.requirePrefix = not self.config.requirePrefix
+		self:_updateSettingsLabels()
+	end)
+
+	local appearance = makePanel(page, "AppearanceSettings", 88)
+	appearance.LayoutOrder = 4
+	addPadding(appearance, 14, 14, 10, 10)
+	makeLabel(appearance, "APPEARANCE", 10, "Muted", {
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(0.4, 0, 0, 20),
+	})
+	local themeButton = makeButton(appearance, "THEME: DARK", "SurfaceAlt")
+	themeButton.AnchorPoint = Vector2.new(1, 0)
+	themeButton.Position = UDim2.new(1, 0, 0, 0)
+	themeButton.Size = UDim2.new(0, 150, 0, 36)
+	themeButton.TextSize = 10
+	self.refs.themeButton = themeButton
+	self:_connect(themeButton.Activated, function()
+		self.config.theme = self.config.theme == "dark" and "light" or "dark"
+		self:_applyTheme()
+		self:_updateSettingsLabels()
+	end)
+
+	local actions = makePanel(page, "SettingsActions", 94)
+	actions.LayoutOrder = 5
+	addPadding(actions, 12, 12, 12, 12)
+	local save = makeButton(actions, "SAVE SETTINGS", "Accent", "AccentText")
+	save.Position = UDim2.new(0, 0, 0, 0)
+	save.Size = UDim2.new(0.58, -5, 0, 38)
+	self:_connect(save.Activated, function()
+		self:_saveSettings()
+	end)
+	local reset = makeButton(actions, "RESET", "SurfaceAlt")
+	reset.AnchorPoint = Vector2.new(1, 0)
+	reset.Position = UDim2.new(1, 0, 0, 0)
+	reset.Size = UDim2.new(0.42, -5, 0, 38)
+	self:_connect(reset.Activated, function()
+		self:_resetSettings()
+	end)
+	makeLabel(actions, "History and settings are session-only; neither persists after restart.", 9, "Muted", {
+		Position = UDim2.new(0, 0, 0, 46),
+		Size = UDim2.new(1, 0, 0, 22),
+		TextWrapped = true,
+	})
+	self:_updateSettingsLabels()
+end
+
+function UIController:_applyTheme()
+	if self.gui then
+		ThemeController.apply(self.gui, self.config.theme)
+	end
+end
+
+function UIController:_showPage(pageName: string)
+	if not self.pages[pageName] then
+		return
+	end
+	self.currentPage = pageName
+	for name, page in pairs(self.pages) do
+		page.Visible = name == pageName
+	end
+	for name, button in pairs(self.pageButtons) do
+		button:SetAttribute("ThemeRole", name == pageName and "Accent" or "Surface")
+	end
+	self:_applyTheme()
+	if pageName == "history" then
+		self:_renderHistory()
+	end
+end
+
+function UIController:_setMode(mode: string)
+	if mode ~= "3" and mode ~= "4" and mode ~= "auto" then
+		return
+	end
+	self.mode = mode
+	for name, button in pairs(self.modeButtons) do
+		button:SetAttribute("ThemeRole", name == mode and "Accent" or "SurfaceAlt")
+	end
+	self:_applyTheme()
+end
+
+function UIController:_showResult(result: {[string]: any})
+	local statusput
 	local clearInput = makeButton(inputPanel, "Clear input", "SurfaceAlt", "Muted")
 	clearInput.Position = UDim2.new(1, -105, 1, -26)
 	clearInput.Size = UDim2.new(0, 105, 0, 24)
