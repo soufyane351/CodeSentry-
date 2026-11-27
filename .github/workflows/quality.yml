@@ -1,1 +1,37 @@
+name: CodeSentry Quality Checks
 
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Validate CodeSentry
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rojo
+        uses: rojo-rbx/setup-rojo@v1
+        with:
+          version: "7.4.4"
+
+      - name: Validate project configuration
+        run: python3 -m json.tool default.project.json > /dev/null
+
+      - name: Build Roblox project
+        run: rojo build default.project.json --output CodeSentry.rbxlx
+
+      - name: Verify build output
+        run: test -s CodeSentry.rbxlx
+        
